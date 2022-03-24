@@ -1,0 +1,49 @@
+---
+- name: Directory Structure
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Repo dir status
+      stat:
+        path: ~/Documents/new_shop/
+      register: repo_dir
+    - name: Create repo dir if non-existent
+      file:
+        path: ~/Documents/new_shop/
+        state: directory
+      when: repo_dir.stat.exists == false
+
+- name: Pull
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Git Pull
+      git:
+        repo: git@github.com:GithinjiC/shop.git
+        dest: ~/Documents/new_shop/
+      register: git_pull
+      notify:
+        - check docker installation
+        - fail if docker not installed
+        - build image
+
+#- name: Fail if pull fails
+#  fail:
+#    msg: "{{ git_pull.stdout }}"
+#  when: git_pull.rc != 0
+
+
+# restart/rebuild image for changes to take effect
+  handlers:
+    - name: check docker installation
+      no_log: true
+      package_facts:
+        manager: apt
+    - name: fail if docker not installed
+      fail:
+        msg: "Docker is not installed on target host"
+      when: "'docker-ce' not in ansible_facts.packages"
+    - name: build image
+      command:
+        cmd: echo "building..."
+...

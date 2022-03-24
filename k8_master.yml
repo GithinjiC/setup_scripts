@@ -1,0 +1,55 @@
+---
+- name: Ensure Kubernetes installed and init
+  hosts: localhost
+#  no_log: true
+  become: true
+  tasks:
+    - name: Check tools
+      package_facts:
+        manager: apt
+    - name: Install aptitude if unavailable
+      apt: name=aptitude update_cache=yes state=latest force_apt_get=true
+      when: "'aptitude' not in ansible_facts.packages"
+    - name: Install kubernetes tools if unavailable
+      apt: name={{ item }} update_cache=yes state=latest
+      loop: ['kubeadm', 'kubelet', 'kubectl', 'kubernetes-cni']
+      when: "'item' not in ansible_facts.packages"
+    - name: Initialize kubeadm
+      shell: |
+        kubeadm init --pod-network-cidr=10.244.0.0/16
+# 10.244.0.0 is the default IP used by kube-flannel
+
+#TODO: In case of errors run `kubeadm reset` systemctl restart kubelet then initialize
+
+- name: Command run as regular user
+  hosts: localhost
+#  no_log: true
+  tasks:
+    - name: Commands
+      shell: |
+        - mkdir -p $HOME/.kube
+        - sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+        - sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+- name: Deploy a Pod network(Flannel)
+  hosts: localhost
+  no_log: true
+  become: true
+  tasks:
+    - name: firewall rules
+      shell: |
+        - ufw allow 6443
+        - ufw allow 6443/tcp
+    - name: commands to deploy network
+      shell: |
+        - kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+        - kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/k8s-manifests/kube-flannel-rbac.yml
+    - name: command to check
+      shell: |
+        kuebctl get pods --all-namespaces
+
+#kubeadm join 10.33.90.107:6443 --token 89x4pi.vvmj511jw7dg54eq \
+#	--discovery-token-ca-cert-hash sha256:6d511cf07f2a793f9298f0f047a932fb5c8dea8160cff8d3fd99a730d9f3cda3
+
+kubeadm join 192.168.100.26:6443 --token 7jbhe8.mrxovpg9k5rjqorn \
+	--discovery-token-ca-cert-hash sha256:6d511cf07f2a793f9298f0f047a932fb5c8dea8160cff8d3fd99a730d9f3cda3

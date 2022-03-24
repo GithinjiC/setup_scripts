@@ -1,0 +1,25 @@
+---
+- name: Check python
+  no_log: true
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Check version
+      package_facts:
+        manager: apt
+#    - name: display
+#      debug:
+#        msg: "All good"
+#      when: "{{ 'python3' in ansible_facts.packages }}"
+    - name: Install aptitude
+      apt: name=aptitude state=latest update_cache=true force_apt_get=true
+      when: "'aptitude' not in ansible_facts.packages"
+    - name: Install packages
+      apt: name={{ item }} state=latest update_cache=true
+      loop: ['apt-transport-https', 'build-essential', 'curl', 'software-properties-common']
+      when: "'item' not in ansible_facts.packages"
+    - name: Install Python3.8
+      apt: name={{ item }} state=latest update_cache=true
+      loop: ['python3.8', 'python3-pip']
+      when: "'python3' and 'python3-pip' not in ansible_facts.packages"
+...

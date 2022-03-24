@@ -1,0 +1,58 @@
+---
+- name: Install Postgres
+  hosts: localhost
+#  no_log: true
+  become: true
+  tasks:
+    - name: Check version
+      no_log: true
+      package_facts:
+        manager: apt
+    - name: Install aptitude
+      apt: name=aptitude state=latest update_cache=true force_apt_get=true
+      when: "'aptitude' not in ansible_facts.packages"
+    - name: Install packages
+      apt: name={{ item }} state=latest update_cache=true
+      loop: ['wget', 'python3-psycopg2']
+      when: "'item' not in ansible_facts.packages"
+    - name: Install Postgres
+      apt: name=postgresql state=latest update_cache=true
+      when: "'postgresql' not in ansible_facts.packages"
+      notify:
+        - enable postgresql
+  handlers:
+    - name: enable postgresql
+      systemd:
+        name: postgresql
+        enabled: true
+
+- name: Install pgAdmin4
+  hosts: localhost
+#  no_log: true
+  become: true
+  tasks:
+    - name: Add pgAdmin4 apt key
+      apt_key:
+        url: https://www.pgadmin.org/static/packages_pgadmin_org.pub
+        state: present
+    - name: Check /etc/apt/sources.list.d/pgadmin4.list
+      stat:
+        path: /etc/apt/sources.list.d/pgadmin4.list
+      register: source_list
+    - name: Add pgAdmin4 repository
+      apt_repository:
+        repo: deb https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/focal pgadmin4 main
+        state: present
+        update_cache: true
+      when: source_list.stat.exists == false
+    - name: Update and install pgAdmin4
+      apt: name=pgadmin4 update_cache=true state=latest
+    - name: Check pgadmin4
+      no_log: true
+      package_facts:
+        manager: apt
+    - name: Fail if pgAdmin not installed
+      fail:
+        msg: "pgAdmin4 not installed"
+      when: "'pgadmin4' not in ansible_facts.packages"
+...

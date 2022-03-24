@@ -1,0 +1,132 @@
+---
+- name: Install packages and dependencies
+#  no_log: true
+  become: true
+  hosts: localhost
+  tasks:
+    - name: Check version
+      no_log: true
+      package_facts:
+        manager: apt
+    - name: Install aptitude
+      apt: name=aptitude update_cache=yes state=latest force_apt_get=true
+      when: "'aptitude' not in ansible_facts.packages"
+    - name: Install dependencies
+      apt: name={{ item }} update_cache=yes state=latest
+      loop: ['apt-transport-https', 'curl']
+      when: "'item' not in ansible_facts.packages"
+
+- name: GPG Key and Repository
+  become: true
+  become_user: root
+#  no_log: true
+  hosts: localhost
+  tasks:
+    - name: Add Kubernetes GPG key
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present
+    - name: Check /etc/apt/sources.list.d/kubernetes.list
+      stat:
+        path: /etc/apt/sources.list.d/kubernetes.list
+      register: source_list
+    - name: Create kubernetes.list file
+      file:
+        path: /etc/apt/sources.list.d/kubernetes.list
+        state: touch
+      when: source_list.stat.exists == false
+    - name: Add Kubernetes repository
+      blockinfile:
+        path: /etc/apt/sources.list.d/kubernetes.list
+        block: |
+          deb https://apt.kubernetes.io/ kubernetes-xenial main
+
+- name: Kubernetes Insallation
+  hosts: localhost
+  become: true
+#  no_log: true
+  tasks:
+    - name: Check version
+      no_log: true
+      package_facts:
+        manager: apt
+    - name: Install Kubernetes
+      apt: name={{ item }} update_cache=yes state=latest
+      loop: ['kubeadm', 'kubelet', 'kubectl', 'kubernetes-cni']
+      when: "'item' not in ansible_facts.packages"
+
+- name: Disable Swap for Kubernetes
+  hosts: localhost
+  become: true
+#  no_log: true
+  tasks:
+    - name: Turn off swap
+      command: |
+        swapoff -a
+    - name: Permanently disable swap
+      replace:
+        path: /etc/fstab
+        regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+        replace: '# \1'
+
+# Change hostnames on nodes and master if preferred
+#- name: Change Hostnames
+#  hosts: localhost
+#  become: true
+##  no_log: true
+#  tasks:
+##    - name: Change Master hostname
+##      hostname:
+##        name: kubernetes_master
+##        use: systemd
+#    - name: Change Worker hostname
+#      hostname:
+#        name: kubernetes_node
+#        use: systemd
+
+# Iptables
+- name: Check Iptables
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Run iptables add script
+      command: |
+        sysctl net.bridge.bridge-nf-call-iptables=1
+
+# Changing Docker Cgroup Driver
+# This block should only be run once on each node and master
+- name: Change Docker Cgroup Driver
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Make docker dir
+      file:
+        path: /etc/docker
+        state: directory
+    - name: make daemon.json
+      file:
+        path: /etc/docker/daemon.json
+        state: touch
+    - name: update cgroupdriver
+      blockinfile:
+        path: /etc/docker/daemon.json
+        marker: ""
+        block: |
+          { "exec-opts": ["native.cgroupdriver=systemd"],
+          "log-driver": "json-file",
+          "log-opts":
+          { "max-size": "100m"},
+          "storage-driver": "overlay2"
+          }
+    - name: Remove blank lines/markers
+      lineinfile:
+        path: /etc/docker/daemon.json
+        state: absent
+        regexp: '^$'
+    - name: Restart Docker Service
+      systemd:
+        name: docker
+        daemon_reload: true
+        enabled: true
+        state: restarted
+...
