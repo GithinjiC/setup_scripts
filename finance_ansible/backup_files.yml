@@ -1,0 +1,85 @@
+---
+- name: Check files/folders
+  hosts: finance
+  gather_facts: false
+#  vars_files:
+#    - vars.yml
+  tasks:
+    - name: file, folder status
+      stat:
+        path: "{{ item }}"
+      register: status
+      with_items:
+        - "/etc/nginx/sites-available/"
+        - "/etc/nginx/conf.d/status.conf"
+    - name: fail if file/folder doesn't exist
+      fail:
+        msg: "{{ item.item }} doesn't exist"
+      when: item.stat.exists != true
+      loop: "{{ status.results }}"
+
+    - name: find files
+      find:
+        path: "/etc/nginx/sites-available/"
+        use_regex: true
+        recurse: true
+        hidden: true
+      register: files_list
+    - name: list
+      debug:
+        msg: "{{ files_list | type_debug }}"
+
+    - name: Synchronize
+      ansible.posix.synchronize:
+        mode: pull
+        src:
+#        msg: "{{ item }}"
+#      loop: "{{ files_list | community.general.json_query('files[*].path') }}"
+#      register: paths
+#    - name: debug
+#      debug:
+#        msg: {{ lookup('fileglob', '/etc/nginx/sites-available/*.') }}
+#      loop: "{{ paths.results | community.general.json_query('item[*]') }}"
+#      loop: "{{ paths.results }}"
+#        msg: item
+#      loop: "{{ paths.results | community.general.json_query('item[*].item', wantlist=True) }}"
+#        msg: "{{ lookup('files_list.files', path , wantlist=True)}}"
+#      register: strings
+#      loop: "{{ paths }}"
+#      register: strings
+#
+#    - name: path string
+#      debug:
+#        msg: "{{ strings. }}"
+
+#    - name: copy files, folders
+#      copy:
+#        remote_src: "{{ item.src }}"
+#        dest: "{{ item.dest }}"
+#        force: true
+#        mode: preserve
+#      with_items:
+#        - {src: "{{ files_list.files.path }}", dest: "/copia/nginx/sites-available/"}
+#        - {src: "/etc/nginx/conf.d/status.conf", dest: "/copia/nginx/conf.d/"}
+
+#    - name: copy files, folders
+#      fetch:
+#        src: "{{ item.src }}"
+#        dest: "{{ item.dest }}"
+#        flat: true
+#        fail_on_missing: true
+#      with_items:
+#        - {src: "{{ files_list | community.general.json_query('files[*].path') | to_json }}", dest: "/copia/nginx/sites-available/"}
+#        - {src: "/etc/nginx/conf.d/status.conf", dest: "/copia/nginx/conf.d/"}
+
+#    - name: write env files if non-existent
+#      template:
+#        src: "{{ item.src }}"
+#        dest: "{{ item.dest }}"
+#        mode: 0644
+#      when: output.changed != false
+#      with_items:
+#        - {src: 'templates/qa.ke_env.j2', dest: "{{ path['qa.ke_dir'] }}.env"}
+#        - {src: 'templates/qa.ug_env.j2', dest: "{{ path['qa.ug_dir'] }}.env"}
+
+

@@ -1,0 +1,25 @@
+---
+- name: Check files/folders
+  hosts: dev
+  gather_facts: false
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: file, folder status
+      stat:
+        path: "{{ item }}"
+      register: status
+      with_items:
+        - "{{ dev_paths }}"
+    - name: fail if file/folder doesn't exist
+      fail:
+        msg: "{{ item.item }} doesn't exist"
+      when: item.stat.exists != true
+      loop: "{{ status.results }}"
+    - name: copy files, folders
+      fetch:
+        src: "{{ item }}"
+        dest: "/copia/"
+      with_items:
+        - "{{ dev_paths }}"
+...

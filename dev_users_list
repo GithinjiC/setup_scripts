@@ -1,0 +1,28 @@
+users:
+  - abhi                            sudo passwd <name>
+  - andrew                          mkdir .ssh && nano .ssh/authorized_keys
+  - bharat
+  - brian
+  - cornel
+  - cos
+  - crescent
+  - cyrus
+  - darwesh
+  - dennis
+  - dilip
+  - humphrey
+  - isaac
+  - jerry
+  - kimutai
+  - leah
+  - levi
+  - luke
+  - mildred
+  - mugambi
+  - onyi
+  - peter
+  - philip
+  - portcities
+  - sonali
+  - victor
+  - vinay

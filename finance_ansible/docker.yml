@@ -1,0 +1,38 @@
+---
+- name: Check Docker Running
+  become: true
+  become_user: root
+  hosts: finance
+  tasks:
+    - name: check docker service
+      block:
+        - name: check docker service
+          systemd:
+            daemon_reload: true
+            name: "{{ item }}"
+          register: service_status
+          loop: [ 'docker.service', 'docker.socket' ]
+        - name: fail if inactive
+          fail:
+            msg: "{{ item.name }} not running."
+          when: item.status.ActiveState != "active"
+          loop: "{{ service_status.results }}"
+      rescue:
+        - name: Restart services
+          systemd:
+            name: "{{ item.name }}"
+            state: restarted
+          loop: "{{ service_status.results }}"
+
+- name: Check containers and/or restart
+  hosts: finance
+  tasks:
+    - name: run script
+      command:
+        cmd: ./docker_monit.sh
+        chdir: /home/ubuntu/
+      register: output
+    - name:
+      debug:
+        msg: "{{ output }}"
+...
