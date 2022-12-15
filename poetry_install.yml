@@ -1,0 +1,29 @@
+---
+- name: Poetry Installation
+  gather_facts: false
+  hosts: dev
+  tasks:
+    - name: Poetry exists
+      ignore_errors: true
+      shell:
+        executable: /bin/bash
+        cmd: ~/.poetry/bin/poetry --version
+      register: poetry_version
+    - name: Install Poetry
+      shell: |
+        set -o pipefail &&
+        curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
+      args:
+        executable: /bin/bash
+      when: poetry_version.rc != 0
+      register: installed
+    - name: Check poetry
+      shell:
+        executable: /bin/bash
+        cmd: ~/.poetry/bin/poetry --version
+      when: installed.changed != false
+    - name: Message
+      fail:
+        msg: "Poetry has been installed. SSH and run cd <repo_dir> && poetry shell && poetry install && exit. Restart the service"
+      when: installed.changed == true
+...

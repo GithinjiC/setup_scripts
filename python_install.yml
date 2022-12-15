@@ -7,10 +7,6 @@
     - name: Check version
       package_facts:
         manager: apt
-#    - name: display
-#      debug:
-#        msg: "All good"
-#      when: "{{ 'python3' in ansible_facts.packages }}"
     - name: Install aptitude
       apt: name=aptitude state=latest update_cache=true force_apt_get=true
       when: "'aptitude' not in ansible_facts.packages"

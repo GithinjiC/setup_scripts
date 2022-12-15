@@ -1,0 +1,9 @@
+[dev]
+51.222.240.58
+
+[dev:vars]
+ansible_user=cos
+ansible_python_interpreter=/usr/bin/python3
+
+[uat]
+34.254.159.10

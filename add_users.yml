@@ -1,0 +1,35 @@
+# awk -F: '{ print $1 }' /etc/passwd | sort -d > users.list
+---
+- name: Create Users
+  hosts: uat
+  become: true
+  gather_facts: false
+  vars_files:
+    - demo_users.yml
+  tasks:
+    - name: add users
+      user:
+        name: "{{ item }}"
+        state: present
+        password: "{{ item }}@copia"
+        shell: /bin/bash
+        append: true
+        groups: sudo
+      loop: "{{ names }}"
+
+- name: Copy ssh files
+  hosts: uat
+  become: true
+  gather_facts: false
+  vars_files:
+    - demo_users.yml
+  tasks:
+    - name: copy ssh files
+      copy:
+        src: "/home/{{ item }}/.ssh/"
+        dest: "/home/{{ item }}/.ssh/"
+        mode: preserve
+        group: "{{ item }}"
+        owner: "{{ item }}"
+      loop: "{{ names }}"
+...
